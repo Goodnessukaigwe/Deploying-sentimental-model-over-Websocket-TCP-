@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Sentiment Chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .chat-container {
+      background: rgba(255, 255, 255, 0.95);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 600px;
+      height: 70vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 20px 20px 0 0;
+    }
+
+    .chat-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .chat-header p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-top: 5px;
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .messages-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .messages-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 10px;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      padding: 15px 20px;
+      border-radius: 20px;
+      max-width: 75%;
+      word-wrap: break-word;
+      animation: slideIn 0.3s ease-out;
+      position: relative;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 15px;
+    }
+
+    .message.user {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 5px;
+    }
+
+    .message.ai {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      align-self: flex-start;
+      border-bottom-left-radius: 5px;
+    }
+
+    .message.ai.positive {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .message.ai.negative {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .message.ai.neutral {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      color: #333;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .message.user .avatar {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .message-text {
+      font-size: 1rem;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .sentiment-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.2);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      margin-top: 5px;
+      align-self: flex-start;
+    }
+
+    .sentiment-icon {
+      font-size: 1rem;
+    }
+
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px 20px;
+      background: #f3f4f6;
+      border-radius: 20px;
+      border-bottom-left-radius: 5px;
+      max-width: 120px;
+      align-self: flex-start;
+      margin-bottom: 15px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #9ca3af;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.5;
+      }
+      30% {
+        transform: translateY(-10px);
+        opacity: 1;
+      }
+    }
+
+    .input-container {
+      padding: 20px;
+      background: white;
+      border-radius: 0 0 20px 20px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      border-top: 1px solid #eee;
+    }
+
+    #message {
+      flex: 1;
+      padding: 15px 20px;
+      border: 2px solid #e1e5e9;
+      border-radius: 25px;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    #message:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      background: white;
+    }
+
+    #send-btn {
+      padding: 15px 25px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 100px;
+      justify-content: center;
+    }
+
+    #send-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    #send-btn:active {
+      transform: translateY(0);
+    }
+
+    #send-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .connection-status {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .connection-status.connected {
+      background: rgba(34, 197, 94, 0.2);
+      color: #059669;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .connection-status.disconnected {
+      background: rgba(239, 68, 68, 0.2);
+      color: #dc2626;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .connected .status-dot {
+      background: #059669;
+    }
+
+    .disconnected .status-dot {
+      background: #dc2626;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @media (max-width: 768px) {
+      .chat-container {
+        height: 90vh;
+        margin: 10px;
+        border-radius: 15px;
+      }
+
+      .chat-header {
+        padding: 15px;
+        border-radius: 15px 15px 0 0;
+      }
+
+      .chat-header h2 {
+        font-size: 1.3rem;
+      }
+
+      .message {
+        max-width: 90%;
+        padding: 12px;
+      }
+
+      .input-container {
+        padding: 15px;
+        gap: 10px;
+      }
+
+      #message {
+        padding: 12px 16px;
+      }
+
+      #send-btn {
+        padding: 12px 20px;
+        min-width: 80px;
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #6b7280;
+      font-style: italic;
+      padding: 40px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="connection-status" id="connectionStatus">
+      <div class="status-dot"></div>
+      <span>Connecting...</span>
+    </div>
+    
+    <div class="chat-header">
+      <h2>💬 AI Sentiment Chat</h2>
+      <p>Chat with an AI that understands your emotions</p>
+    </div>
+
+    <div class="messages-container" id="messagesContainer">
+      <div class="empty-state" id="emptyState">
+        👋 Hi there! I'm your AI companion. Send me a message and I'll respond based on how you're feeling! 
+      </div>
+    </div>
+
+    <div class="input-container">
+      <input 
+        id="message" 
+        placeholder="Type your message and see the sentiment..." 
+        maxlength="500"
+      />
+      <button id="send-btn" onclick="sendMessage()">
+        <span>Send</span>
+        <span>📤</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const socket = new WebSocket(`ws://${location.host}/ws`);
+    const messagesContainer = document.getElementById("messagesContainer");
+    const emptyState = document.getElementById("emptyState");
+    const connectionStatus = document.getElementById("connectionStatus");
+    const messageInput = document.getElementById("message");
+    const sendBtn = document.getElementById("send-btn");
+    let typingIndicator = null;
+
+    // Connection status management
+    socket.onopen = () => {
+      connectionStatus.className = "connection-status connected";
+      connectionStatus.innerHTML = '<div class="status-dot"></div><span>Connected</span>';
+      sendBtn.disabled = false;
+    };
+
+    socket.onclose = () => {
+      connectionStatus.className = "connection-status disconnected";
+      connectionStatus.innerHTML = '<div class="status-dot"></div><span>Disconnected</span>';
+      sendBtn.disabled = true;
+    };
+
+    socket.onerror = () => {
+      connectionStatus.className = "connection-status disconnected";
+      connectionStatus.innerHTML = '<div class="status-dot"></div><span>Error</span>';
+      sendBtn.disabled = true;
+    };
+
+    function showTypingIndicator() {
+      typingIndicator = document.createElement("div");
+      typingIndicator.className = "typing-indicator";
+      typingIndicator.innerHTML = `
+        <div class="avatar">🤖</div>
+        <div class="typing-dots">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      `;
+      messagesContainer.appendChild(typingIndicator);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+      if (typingIndicator) {
+        typingIndicator.remove();
+        typingIndicator = null;
+      }
+    }
+
+    socket.onmessage = (event) => {
+      // Hide empty state when first message arrives
+      if (emptyState) {
+        emptyState.style.display = 'none';
+      }
+
+      const messageData = JSON.parse(event.data);
+      
+      if (messageData.type === "user") {
+        // Add user message
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "message user";
+        
+        messageDiv.innerHTML = `
+          <div class="message-header">
+            <div class="avatar">👤</div>
+            <span>You</span>
+          </div>
+          <div class="message-text">${messageData.message}</div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Show typing indicator for AI response
+        setTimeout(() => {
+          showTypingIndicator();
+        }, 200);
+        
+      } else if (messageData.type === "ai") {
+        // Hide typing indicator
+        hideTypingIndicator();
+        
+        // Add AI message with delay for realism
+        setTimeout(() => {
+          const messageDiv = document.createElement("div");
+          messageDiv.className = `message ai ${messageData.sentiment}`;
+          
+          const sentimentIcons = {
+            positive: "😊",
+            negative: "😔", 
+            neutral: "😐"
+          };
+
+          const sentimentLabels = {
+            positive: "Positive vibes detected",
+            negative: "Negative sentiment detected",
+            neutral: "Neutral tone detected"
+          };
+
+          messageDiv.innerHTML = `
+            <div class="message-header">
+              <div class="avatar">🤖</div>
+              <span>AI Assistant</span>
+            </div>
+            <div class="message-text">${messageData.message}</div>
+            <div class="sentiment-badge">
+              <span class="sentiment-icon">${sentimentIcons[messageData.sentiment] || "🤔"}</span>
+              <span>${sentimentLabels[messageData.sentiment] || messageData.sentiment}</span>
+            </div>
+          `;
+
+          messagesContainer.appendChild(messageDiv);
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 800 + Math.random() * 1200); // Random delay between 0.8-2s for realism
+      }
+    };
+
+    function sendMessage() {
+      const input = document.getElementById("message");
+      if (input.value.trim() && socket.readyState === WebSocket.OPEN) {
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span>Sending...</span><span>⏳</span>';
+        
+        socket.send(input.value);
+        input.value = "";
+        
+        setTimeout(() => {
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = '<span>Send</span><span>📤</span>';
+        }, 500);
+      }
+    }
+
+    // Allow sending with Enter key
+    messageInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Auto-focus input
+    messageInput.focus();
+  </script>
+</body>
+</html>
